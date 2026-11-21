@@ -338,6 +338,16 @@ async function merge(fb,fc,opt){
   const mdH=mdRows>5?380000:446395, ph2y=1405491+mdRows*mdH+330000;setPos(ph2,{y:ph2y,cy:303630});setPos(adF,{y:ph2y+303630+60000});
   const hf=kid(kid(cell(t,0,0),'tcPr'),'solidFill');
   if(hf)for(const tb of [mt,at])for(const tc of tcs(trs(tb)[0]))setFill(tc,hf);
+  // 테두리 보정: 바깥 좌/우 테두리가 '없음'인 칸은 위/아래 선과 같은 선으로 채움 (통합본처럼 네 면 모두 선)
+  const fixBorders=tbl=>{for(const tr of trs(tbl))for(const tc of tcs(tr)){const pr=kid(tc,'tcPr');if(!pr)continue;
+    for(const side of ['lnL','lnR']){const e=kid(pr,side);if(!e||!kid(e,'noFill'))continue;
+      const ref=[kid(pr,'lnT'),kid(pr,'lnB')].find(x=>x&&!kid(x,'noFill'));if(!ref)continue;
+      const ne=mk(tc.ownerDocument,side);for(const a of [...ref.attributes])ne.setAttribute(a.name,a.value);
+      for(const c of [...ref.childNodes])ne.appendChild(clone(c));pr.replaceChild(ne,e)}}};
+  for(const tb of [t,ot,mt,at])fixBorders(tb);
+  // 상품운영 표 정렬: 분야·구분·실행계획·기간은 가운데, 내용은 왼쪽
+  trs(ot).slice(1).forEach(tr=>tcs(tr).forEach((tc,ci)=>{if(ci===3)return;
+    for(const p of kids(kid(tc,'txBody'),'p')){let pp=kid(p,'pPr');if(!pp){pp=mk(tc.ownerDocument,'pPr');p.insertBefore(pp,p.firstChild)}pp.setAttribute('algn','ctr')}}));
   // 저장
   const ser=new XMLSerializer();
   B.docs.forEach((d,i)=>B.zip.file(B.paths[i],'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'+ser.serializeToString(d).replace(/^<\?xml[^>]*\?>\s*/,'')));
