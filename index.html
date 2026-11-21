@@ -241,22 +241,35 @@ async function merge(fb,fc,opt){
   // 슬라이드 1
   for(const s of all(b1,'sp',P)) if(/PART/.test(spText(s))) setTextKeep(s,['- 일반서적 PART 주간별-']);
   // 슬라이드 2
+  let opRowH=314031;
+  const _opF=need(shapeById(b2,10),'상품운영 표'), _copF=need(shapeById(c2,10),'어린이 상품운영 표');
+  const allRowsCount=trs(tblOf(_opF)).slice(1).filter(tr=>tcs(tr).some(c=>cellText(c).trim())).length+
+    trs(tblOf(_copF)).slice(1).filter(tr=>tcs(tr).slice(1).some(c=>cellText(c).trim())).length;
   const titleSp=need(all(b2,'sp',P).find(s=>/일반서적파트/.test(spText(s))),'문학 파일 2번 슬라이드 제목');
   setTextKeep(titleSp,[ctitle]);
   const mkF=need(shapeById(b2,2),'마케팅 표'), ckF=need(shapeById(c2,2),'어린이 마케팅 표');
   const t=tblOf(mkF);
   const fixPeriod=tc=>{const m=cellText(tc).trim().match(/^(\d+\/\d+)\s*~\s*(\d+\/\d+)$/);if(m&&m[1]===m[2])setCell(tc,defPeriod)};
-  fixPeriod(cell(t,1,3));
   const kidRows=[];
-  trs(tblOf(ckF)).slice(1).forEach(tr=>{const c=tcs(tr).map(cellText);if(c.slice(1).some(x=>x.trim()))kidRows.push(c)});
-  while(trs(t).length>2)delRow(t,2);
-  for(const k of kidRows){cloneRow(t,1);const i=trs(t).length-1;
-    setCell(cell(t,i,1),linesOf(k[1]).join('\n').replace(/^\s*[*•]\s*/,''));
-    setCell(cell(t,i,2),linesOf(k[2]));
-    setCell(cell(t,i,3),linesOf(k[3]).join(' ').trim()||defPeriod)}
+  trs(tblOf(ckF)).slice(1).forEach(tr=>{const c=tcs(tr).map(cellText);if(c.slice(1,3).some(x=>x.trim()))kidRows.push(c)});
+  const dataTrs=trs(t).slice(1);
+  const litKeep=dataTrs.filter(tr=>tcs(tr).slice(1,3).some(c=>cellText(c).trim()));
+  const tmplTr=clone(litKeep[0]||dataTrs[0]);
+  dataTrs.forEach(tr=>t.removeChild(tr));
+  litKeep.forEach(tr=>{t.appendChild(tr);fixPeriod(tcs(tr)[3])});
+  for(const k of kidRows){const tr=clone(tmplTr);freshIds(tr);t.appendChild(tr);const cs=tcs(tr);
+    setCell(cs[1],linesOf(k[1]).join('\n').replace(/^\s*[*•]\s*/,''));
+    setCell(cs[2],linesOf(k[2]));
+    setCell(cs[3],linesOf(k[3]).join(' ').trim()||defPeriod)}
+  if(trs(t).length<2){const tr=clone(tmplTr);t.appendChild(tr)}
   const n=trs(t).length;
   setCell(cell(t,1,0),'1주차~\x0b4주차'); mergeRange(t,1,0,n-1,0);
   const hs=[264354];for(let i=1;i<n;i++){const nl=Math.max(linesOf(cellText(cell(t,i,2))).length,1);hs.push(Math.max(353748,160000*nl))}
+  const LIM=6858000-300000, FIXED=260000+428625+20000;
+  const opRowsEst=1+allRowsCount;
+  let mkSum=hs.reduce((a,b)=>a+b,0), opSum=opRowsEst*314031;
+  if(1256782+mkSum+FIXED+opSum>LIM){const avail=LIM-1256782-FIXED, f=Math.max(0.55,avail/(mkSum+opSum));
+    for(let i=0;i<hs.length;i++)hs[i]=Math.max(i?240000:200000,hs[i]*f);opRowH=Math.max(220000,314031*f)}
   setHeights(mkF,hs);
   const gc=kids(kid(t,'tblGrid'),'gridCol');gc[2].setAttribute('w',+gc[2].getAttribute('w')-150000);gc[3].setAttribute('w',+gc[3].getAttribute('w')+150000);
   setPos(mkF,{y:1256782});
@@ -281,7 +294,7 @@ async function merge(fb,fc,opt){
     if(field==='문학'){const m=per.match(/^(\d+\/\d+)\s*~\s*(\d+\/\d+)$/);per=(!m||m[1]===m[2])?defPeriod:per}
     setCell(cell(ot,i,4),per)});
   const nl=allRows.filter(x=>x[0]==='문학').length; if(nl>1)mergeRange(ot,1,0,nl,0);
-  setHeights(opF,trs(ot).map(()=>314031));
+  setHeights(opF,trs(ot).map(()=>opRowH));
   setPos(opF,{cx:widths.reduce((a,b)=>a+b,0),y:getTop(sec2)+428625+20000});
   // 슬라이드 3
   const ph1=need(shapeById(b3,3),'슬라이드3 제목칸1'), ph2=need(shapeById(b3,5),'슬라이드3 제목칸2');
@@ -296,9 +309,15 @@ async function merge(fb,fc,opt){
   const topic=(ctxt.match(/■\s*(.+)/)||[])[1], kwon=(ctxt.match(/(\d+)\s*권/)||[])[1], kman=(ctxt.match(/매\s*출\s*:\s*([\d,]+)\s*만원/)||[])[1];
   if(!topic||!kwon||!kman)throw new Error('어린이 3번 슬라이드에서 MD 매출(주제/권수/매출)을 읽지 못했어요.\n"■ 주제 / 종권수 : 15종 140권 / 매 출 : 200만원" 형식이 필요해요.');
   const mdF=need(shapeById(b3,2),'전월 MD 매출 표'), mt=tblOf(mdF);
-  while(trs(mt).length>2)delRow(mt,2); cloneRow(mt,1);
-  setCell(cell(mt,2,0),'어린이');setCell(cell(mt,2,1),topic.trim());setCell(cell(mt,2,2),kwon+'권');setCell(cell(mt,2,3),(parseInt(kman.replace(/,/g,''))*10000).toLocaleString('en-US')+'원');
-  setHeights(mdF,[446395,446395,446395]);
+  const mdData=trs(mt).slice(1);
+  const mdKeep=mdData.filter(tr=>tcs(tr).some(c=>cellText(c).trim()));
+  const mdTmpl=clone(mdKeep[0]||mdData[0]);
+  mdData.forEach(tr=>mt.removeChild(tr));
+  mdKeep.forEach(tr=>mt.appendChild(tr));
+  {const tr=clone(mdTmpl);freshIds(tr);mt.appendChild(tr);const cs=tcs(tr);
+   setCell(cs[0],'어린이');setCell(cs[1],topic.trim());setCell(cs[2],kwon+'권');setCell(cs[3],(parseInt(kman.replace(/,/g,''))*10000).toLocaleString('en-US')+'원')}
+  const mdRows=trs(mt).length;
+  setHeights(mdF,Array(mdRows).fill(mdRows>5?380000:446395));
   const adF=need(shapeById(b3,6),'광고 매출 표'), at=tblOf(adF);
   const data=trs(at).slice(1).map(tr=>{const c=tcs(tr).map(cellText);let f=c[0].trim(),tong=digits(c[1]),su=digits(c[2]);
     const m=opt.manual[f];if(m){if(m[0]!=null)tong=m[0];if(m[1]!=null)su=m[1]}return [f,tong,su]});
@@ -316,7 +335,7 @@ async function merge(fb,fc,opt){
   setPos(adF,{x:+mdPos.getAttribute('x'),cx:w3.reduce((a,b)=>a+b,0)});
   setHeights(adF,Array(k+1).fill(380608));
   setPos(mdF,{y:1405491});setPos(ph1,{y:931343-12000,cy:303630});
-  const ph2y=1405491+3*446395+330000;setPos(ph2,{y:ph2y,cy:303630});setPos(adF,{y:ph2y+303630+60000});
+  const mdH=mdRows>5?380000:446395, ph2y=1405491+mdRows*mdH+330000;setPos(ph2,{y:ph2y,cy:303630});setPos(adF,{y:ph2y+303630+60000});
   const hf=kid(kid(cell(t,0,0),'tcPr'),'solidFill');
   if(hf)for(const tb of [mt,at])for(const tc of tcs(trs(tb)[0]))setFill(tc,hf);
   // 저장
