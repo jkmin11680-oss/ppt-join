@@ -116,10 +116,10 @@ button:disabled{background:linear-gradient(180deg,#cfd9d3,#bccbc2);box-shadow:va
    <div class="grid">
     <div><label class="f" for="kid_t">어린이 통유광고</label><input type="text" id="kid_t" placeholder="예: 20050000" inputmode="numeric" autocomplete="off"></div>
     <div><label class="f" for="kid_s">어린이 수기광고</label><input type="text" id="kid_s" inputmode="numeric" autocomplete="off"></div>
-    <div><label class="f" for="study_t">학습 통유광고</label><input type="text" id="study_t" placeholder="예: 25050000" inputmode="numeric" autocomplete="off"></div>
-    <div><label class="f" for="study_s">학습 수기광고</label><input type="text" id="study_s" inputmode="numeric" autocomplete="off"></div>
+    <div><label class="f" for="study_t">학습 통유광고 <span class="req">(VAT 포함)</span></label><input type="text" id="study_t" placeholder="예: 25050000" inputmode="numeric" autocomplete="off"></div>
+    <div><label class="f" for="study_s">학습 수기광고 <span class="req">(VAT 포함)</span></label><input type="text" id="study_s" inputmode="numeric" autocomplete="off"></div>
    </div>
-   <p class="hint">💡 숫자만 입력하세요. 비워 두면 문학 파일 표의 값을 그대로 쓰고, 총액·합계는 자동으로 계산돼요.</p>
+   <p class="hint">💡 숫자만 입력하세요. 비워 두면 문학 파일 표의 값을 그대로 쓰고, 총액·합계는 자동으로 계산돼요.<br>🧾 <b>학습 광고금액</b>은 VAT 포함 금액을 입력하면, PPT에는 <b>VAT 제외 금액(÷1.1, 원 단위 반올림)</b>으로 들어가요.</p>
   </div>
   <div class="act"><button id="b" disabled><span>파일 2개를 선택해 주세요</span></button><div id="msg"></div></div>
  </form>
@@ -320,7 +320,10 @@ async function merge(fb,fc,opt){
   setHeights(mdF,Array(mdRows).fill(mdRows>5?380000:446395));
   const adF=need(shapeById(b3,6),'광고 매출 표'), at=tblOf(adF);
   const data=trs(at).slice(1).map(tr=>{const c=tcs(tr).map(cellText);let f=c[0].trim(),tong=digits(c[1]),su=digits(c[2]);
-    const m=opt.manual[f];if(m){if(m[0]!=null)tong=m[0];if(m[1]!=null)su=m[1]}return [f,tong,su]});
+    const m=opt.manual[f];
+    if(m){const adj=v=>(opt.vatExcl||[]).includes(f)?Math.round(v/1.1):v;   // VAT 포함 입력값 -> VAT 제외(÷1.1, 원 단위 반올림)
+      if(m[0]!=null)tong=adj(m[0]);if(m[1]!=null)su=adj(m[1])}
+    return [f,tong,su]});
   const hdr=clone(trs(mt)[0]);freshIds(hdr);at.insertBefore(hdr,trs(at)[0]);delRow(at,1);
   ['분야','통유광고','수기광고','총액'].forEach((s,i)=>setCell(cell(at,0,i),s));
   data.forEach(([f,tong,su],j)=>{const i=j+1;const nt=clone(trs(at)[1]);freshIds(nt);at.insertBefore(nt,trs(at)[i]);delRow(at,i+1);
@@ -372,9 +375,9 @@ bind($('d1'),$('lit'),'lit');bind($('d2'),$('kid'),'kid');
 $('f').onsubmit=async e=>{e.preventDefault();const b=$('b'),m=$('msg');b.disabled=true;b.dataset.run=1;m.className='';m.textContent='만드는 중이에요… 잠시만요 ⏳';
   try{
     const goal=numIn('goal');if(goal==null)throw new Error('광고 목표금액을 숫자로 입력해 주세요.');
-    const r=await merge(files.lit,files.kid,{goal,manual:{'어린이':[numIn('kid_t'),numIn('kid_s')],'학습':[numIn('study_t'),numIn('study_s')]}});
+    const r=await merge(files.lit,files.kid,{goal,vatExcl:['학습'],manual:{'어린이':[numIn('kid_t'),numIn('kid_s')],'학습':[numIn('study_t'),numIn('study_s')]}});
     const a=document.createElement('a');a.href=URL.createObjectURL(r.blob);a.download=`${r.month}월_일반서적_통합본.pptx`;document.body.appendChild(a);a.click();a.remove();
-    m.textContent=`완료! ${r.month}월 통합본을 내려받았어요. (광고 합계 ${r.total.toLocaleString('en-US')}원)`;
+    m.textContent=`완료! ${r.month}월 통합본을 내려받았어요. (광고 합계 ${r.total.toLocaleString('en-US')}원, 학습광고는 VAT 제외 금액으로 반영)`;
   }catch(x){console.error(x);m.className='err';m.textContent='오류: '+x.message}
   delete b.dataset.run;b.disabled=false;chips()};
 </script></body></html>
